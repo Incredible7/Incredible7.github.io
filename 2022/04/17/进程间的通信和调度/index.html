@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>Hexo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="#进程间的通信和调度 进程间通信进程其实就是计算机对于正在运行程序的一个抽象。对于进程而言，不同的进程之间需要进行信息传递，也就是我们说的通信。可是该怎么通信呢？一个进程如何把信息传递给另一个？如何确保两个及以上的进程在关键活动中不会出现交叉？或者进程之间有顺序，我们该如何保证这种通信的顺序？ 首先我们要清楚，进程的运行是受限的，因为不同进程的并发或者并行操作会使得一些固有的认知遭到冲击——他们会">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hexo">
+<meta property="og:url" content="http://example.com/2022/04/17/%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E9%80%9A%E4%BF%A1%E5%92%8C%E8%B0%83%E5%BA%A6/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="#进程间的通信和调度 进程间通信进程其实就是计算机对于正在运行程序的一个抽象。对于进程而言，不同的进程之间需要进行信息传递，也就是我们说的通信。可是该怎么通信呢？一个进程如何把信息传递给另一个？如何确保两个及以上的进程在关键活动中不会出现交叉？或者进程之间有顺序，我们该如何保证这种通信的顺序？ 首先我们要清楚，进程的运行是受限的，因为不同进程的并发或者并行操作会使得一些固有的认知遭到冲击——他们会">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2022-04-17T12:26:03.898Z">
+<meta property="article:modified_time" content="2022-04-17T14:08:06.511Z">
+<meta property="article:author" content="John Doe">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/favicon.png">
+  
+  
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-source-code-pro@0.0.71/index.min.css">
+
+  
+  
+<link rel="stylesheet" href="/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.min.css">
+
+  
+<meta name="generator" content="Hexo 6.1.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://example.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-进程间的通信和调度" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/2022/04/17/%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E9%80%9A%E4%BF%A1%E5%92%8C%E8%B0%83%E5%BA%A6/" class="article-date">
+  <time class="dt-published" datetime="2022-04-17T12:26:03.898Z" itemprop="datePublished">2022-04-17</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <p>#进程间的通信和调度</p>
+<h2 id="进程间通信"><a href="#进程间通信" class="headerlink" title="进程间通信"></a>进程间通信</h2><p>进程其实就是计算机对于正在运行程序的一个抽象。对于进程而言，不同的进程之间需要进行信息传递，也就是我们说的通信。可是该怎么通信呢？一个进程如何把信息传递给另一个？如何确保两个及以上的进程在关键活动中不会出现交叉？或者进程之间有顺序，我们该如何保证这种通信的顺序？</p>
+<p>首先我们要清楚，进程的运行是受限的，因为不同进程的并发或者并行操作会使得一些固有的认知遭到冲击——他们会改变彼此的信息。这是因为进程的成功运行依赖于精确的时序逻辑，这个时序被称为竞争条件（race condition）。为了避免竞争条件，或者说让进程有序地执行，我们就不能让进程在访问共享内容时随心所欲，也就是说，我们需要让一种互斥（mutual exclusion）来使得一个进程工作时，其他进程不得进行同样的操作。</p>
+<p>我们把对共享内存进行访问的程序片断称为临界区域（critical region）或者临界区（critical section）。同一时间，我们只希望一个进程在临界区内更新共享内存，而其他进程必须等待，直到临界区不再被任意进程占有。</p>
+<p>接下来我们尝试完成这项操作。</p>
+<ol>
+<li><p>屏蔽中断：</p>
+<p> 单处理器系统对于这种情况的处理估计是最简单的，在进程进入临界区后立即屏蔽所有中断，处理完毕。然而正如你所见，现在完全不好使了，下一个。</p>
+</li>
+<li><p>锁变量：</p>
+</li>
+</ol>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="http://example.com/2022/04/17/%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E9%80%9A%E4%BF%A1%E5%92%8C%E8%B0%83%E5%BA%A6/" data-id="cl2ui7guw0004aktqgn8306xb" data-title="" class="article-share-link">Share</a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2022/05/05/%E6%A0%91/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          (no title)
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2022/04/16/KMP/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title"></div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2022/05/">May 2022</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2022/04/">April 2022</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recent Posts</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2022/05/05/%E6%A0%91/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2022/04/17/%E8%BF%9B%E7%A8%8B%E9%97%B4%E7%9A%84%E9%80%9A%E4%BF%A1%E5%92%8C%E8%B0%83%E5%BA%A6/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2022/04/16/KMP/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2022/04/15/deque/">(no title)</a>
+          </li>
+        
+          <li>
+            <a href="/2022/04/15/auto/">(no title)</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2022 John Doe<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/js/jquery-3.4.1.min.js"></script>
+
+
+
+  
+<script src="/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
